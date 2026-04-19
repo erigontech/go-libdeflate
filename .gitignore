@@ -1,0 +1,23 @@
+# Go build artifacts
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+
+# Test binaries
+*.test
+*.out
+
+# Go workspace
+go.work
+go.work.sum
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
