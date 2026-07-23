@@ -1,0 +1,22 @@
+# golangci-lint configuration (v2 schema).
+version: "2"
+
+linters:
+  # "standard" enables errcheck, govet, ineffassign, staticcheck and unused.
+  default: standard
+  enable:
+    - misspell
+    - unconvert
+    - revive
+    - bodyclose
+    - nilerr
+  exclusions:
+    # The bundled C library under libdeflate/ contains no Go code, but exclude
+    # it explicitly so nothing here ever tries to lint it.
+    paths:
+      - libdeflate
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
