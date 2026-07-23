@@ -74,18 +74,32 @@ func (d *Decompressor) Close() {
 	}
 }
 
+// bytePtr returns a pointer to the first byte of b, or nil if b is empty.
+// Taking &b[0] on a zero-length slice panics with an out-of-range error, so it
+// cannot be used for the src of an empty input. libdeflate accepts a NULL data
+// pointer when the corresponding length is 0.
+func bytePtr(b []byte) unsafe.Pointer {
+	if len(b) == 0 {
+		return nil
+	}
+	return unsafe.Pointer(&b[0])
+}
+
 // --- Deflate (raw) ---
 
 // CompressDeflate compresses src into dst using raw DEFLATE format.
 // dst must be large enough; use DeflateCompressBound to get the upper bound.
 // Returns the number of bytes written, or an error if dst is too small.
+//
+// An empty src is compressed to a valid (non-empty) empty DEFLATE stream, not
+// to zero bytes — zero bytes is not a decodable DEFLATE stream.
 func (c *Compressor) CompressDeflate(dst, src []byte) (int, error) {
-	if len(src) == 0 {
-		return 0, nil
+	if len(dst) == 0 {
+		return 0, errors.New("libdeflate: deflate compress failed: output buffer too small")
 	}
 	n := C.libdeflate_deflate_compress(
 		c.c,
-		unsafe.Pointer(&src[0]), C.size_t(len(src)),
+		bytePtr(src), C.size_t(len(src)),
 		unsafe.Pointer(&dst[0]), C.size_t(len(dst)),
 	)
 	if n == 0 {
@@ -106,6 +120,9 @@ func (d *Decompressor) DecompressDeflate(dst []byte, src []byte) (int, error) {
 	if len(src) == 0 {
 		return 0, nil
 	}
+	if len(dst) == 0 {
+		return 0, errors.New("libdeflate: deflate decompress failed: output buffer too small")
+	}
 	var actualOut C.size_t
 	result := C.libdeflate_deflate_decompress(
 		d.d,
@@ -122,13 +139,16 @@ func (d *Decompressor) DecompressDeflate(dst []byte, src []byte) (int, error) {
 // --- Gzip ---
 
 // CompressGzip compresses src into dst using the gzip format.
+//
+// An empty src is compressed to a valid (non-empty) gzip stream, not to zero
+// bytes — a standard gzip decoder rejects zero bytes as truncated input.
 func (c *Compressor) CompressGzip(dst, src []byte) (int, error) {
-	if len(src) == 0 {
-		return 0, nil
+	if len(dst) == 0 {
+		return 0, errors.New("libdeflate: gzip compress failed: output buffer too small")
 	}
 	n := C.libdeflate_gzip_compress(
 		c.c,
-		unsafe.Pointer(&src[0]), C.size_t(len(src)),
+		bytePtr(src), C.size_t(len(src)),
 		unsafe.Pointer(&dst[0]), C.size_t(len(dst)),
 	)
 	if n == 0 {
@@ -148,6 +168,9 @@ func (d *Decompressor) DecompressGzip(dst []byte, src []byte) (int, error) {
 	if len(src) == 0 {
 		return 0, nil
 	}
+	if len(dst) == 0 {
+		return 0, errors.New("libdeflate: gzip decompress failed: output buffer too small")
+	}
 	var actualOut C.size_t
 	result := C.libdeflate_gzip_decompress(
 		d.d,
@@ -164,13 +187,16 @@ func (d *Decompressor) DecompressGzip(dst []byte, src []byte) (int, error) {
 // --- Zlib ---
 
 // CompressZlib compresses src into dst using the zlib format.
+//
+// An empty src is compressed to a valid (non-empty) zlib stream, not to zero
+// bytes — a standard zlib decoder rejects zero bytes as truncated input.
 func (c *Compressor) CompressZlib(dst, src []byte) (int, error) {
-	if len(src) == 0 {
-		return 0, nil
+	if len(dst) == 0 {
+		return 0, errors.New("libdeflate: zlib compress failed: output buffer too small")
 	}
 	n := C.libdeflate_zlib_compress(
 		c.c,
-		unsafe.Pointer(&src[0]), C.size_t(len(src)),
+		bytePtr(src), C.size_t(len(src)),
 		unsafe.Pointer(&dst[0]), C.size_t(len(dst)),
 	)
 	if n == 0 {
@@ -189,6 +215,9 @@ func (c *Compressor) ZlibCompressBound(srcLen int) int {
 func (d *Decompressor) DecompressZlib(dst []byte, src []byte) (int, error) {
 	if len(src) == 0 {
 		return 0, nil
+	}
+	if len(dst) == 0 {
+		return 0, errors.New("libdeflate: zlib decompress failed: output buffer too small")
 	}
 	var actualOut C.size_t
 	result := C.libdeflate_zlib_decompress(
