@@ -207,11 +207,11 @@ func (d *Decompressor) DecompressZlib(dst []byte, src []byte) (int, error) {
 
 // GzipCompress compresses src and returns the gzip-compressed bytes.
 func GzipCompress(src []byte, level int) ([]byte, error) {
-	c, err := NewCompressor(level)
+	c, err := getCompressor(level)
 	if err != nil {
 		return nil, err
 	}
-	defer c.Close()
+	defer putCompressor(level, c)
 	dst := make([]byte, c.GzipCompressBound(len(src)))
 	n, err := c.CompressGzip(dst, src)
 	if err != nil {
@@ -223,11 +223,11 @@ func GzipCompress(src []byte, level int) ([]byte, error) {
 // GzipDecompress decompresses a gzip stream, assuming the uncompressed size
 // is at most maxOutLen bytes.
 func GzipDecompress(src []byte, maxOutLen int) ([]byte, error) {
-	d, err := NewDecompressor()
+	d, err := getDecompressor()
 	if err != nil {
 		return nil, err
 	}
-	defer d.Close()
+	defer putDecompressor(d)
 	dst := make([]byte, maxOutLen)
 	n, err := d.DecompressGzip(dst, src)
 	if err != nil {
@@ -238,11 +238,11 @@ func GzipDecompress(src []byte, maxOutLen int) ([]byte, error) {
 
 // ZlibCompress compresses src and returns the zlib-compressed bytes.
 func ZlibCompress(src []byte, level int) ([]byte, error) {
-	c, err := NewCompressor(level)
+	c, err := getCompressor(level)
 	if err != nil {
 		return nil, err
 	}
-	defer c.Close()
+	defer putCompressor(level, c)
 	dst := make([]byte, c.ZlibCompressBound(len(src)))
 	n, err := c.CompressZlib(dst, src)
 	if err != nil {
@@ -253,11 +253,11 @@ func ZlibCompress(src []byte, level int) ([]byte, error) {
 
 // ZlibDecompress decompresses a zlib stream.
 func ZlibDecompress(src []byte, maxOutLen int) ([]byte, error) {
-	d, err := NewDecompressor()
+	d, err := getDecompressor()
 	if err != nil {
 		return nil, err
 	}
-	defer d.Close()
+	defer putDecompressor(d)
 	dst := make([]byte, maxOutLen)
 	n, err := d.DecompressZlib(dst, src)
 	if err != nil {
